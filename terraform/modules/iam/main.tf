@@ -76,3 +76,27 @@ resource "aws_iam_instance_profile" "this" {
   name = "${var.project_name}-${var.environment}-ec2-profile"
   role = aws_iam_role.this.name
 }
+
+# ECR pull (모든 repo에 대해 — 계정 내 ECR repo 자체가 prod 컨트롤)
+data "aws_iam_policy_document" "ecr_pull" {
+  statement {
+    sid = "EcrPull"
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "ecr_pull" {
+  name   = "${var.project_name}-${var.environment}-ecr-pull"
+  policy = data.aws_iam_policy_document.ecr_pull.json
+}
+
+resource "aws_iam_role_policy_attachment" "ecr_pull" {
+  role       = aws_iam_role.this.name
+  policy_arn = aws_iam_policy.ecr_pull.arn
+}
