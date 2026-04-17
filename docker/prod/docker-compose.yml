@@ -1,6 +1,7 @@
 services:
   nginx:
     image: nginx:1.25-alpine
+    container_name: wepick_nginx
     ports:
       - "80:80"
       - "443:443"
@@ -11,15 +12,22 @@ services:
       - frontend
       - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   frontend:
-    image: ghcr.io/${GITHUB_OWNER}/wepick-fe:latest
+    image: ${FE_IMAGE}:${FE_IMAGE_TAG}
+    container_name: wepick_frontend
     expose:
       - "3000"
     restart: unless-stopped
 
   backend:
-    image: ghcr.io/${GITHUB_OWNER}/wepick-be:latest
+    image: ${BE_IMAGE}:${BE_IMAGE_TAG}
+    container_name: wepick_backend
     expose:
       - "8080"
     environment:
@@ -34,6 +42,7 @@ services:
 
   mysql:
     image: mysql:8.0
+    container_name: wepick_mysql
     expose:
       - "3306"
     environment:
