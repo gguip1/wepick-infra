@@ -59,7 +59,7 @@ jobs:
             --instance-ids ${{ steps.instance.outputs.id }} \
             --document-name "AWS-RunShellScript" \
             --comment "Deploy ${{ steps.target.outputs.service }} via GitHub Actions" \
-            --parameters commands='["bash /usr/local/bin/deploy-on-ec2.sh ${{ steps.target.outputs.service }}"]' \
+            --parameters commands='["BUCKET=$(aws ssm get-parameter --name /wepick/artifacts_bucket --query Parameter.Value --output text --region ap-northeast-2)","aws s3 cp s3://$BUCKET/prod/scripts/deploy-on-ec2.sh /tmp/deploy-on-ec2.sh --region ap-northeast-2","chmod +x /tmp/deploy-on-ec2.sh","bash /tmp/deploy-on-ec2.sh ${{ steps.target.outputs.service }}"]' \
             --query "Command.CommandId" --output text)
           echo "command_id=$CMD_ID" >> $GITHUB_OUTPUT
 
