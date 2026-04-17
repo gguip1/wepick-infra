@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.6.0"
+  required_version = ">= 1.10.0"
 
   required_providers {
     aws = {
@@ -8,7 +8,6 @@ terraform {
     }
   }
 
-  # envs/backend/ apply 후 아래 주석 해제 → terraform init -migrate-state
   backend "s3" {
     bucket       = "wepick-tfstate-149465616382"
     key          = "envs/prod/terraform.tfstate"
@@ -20,6 +19,14 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
+
+  default_tags {
+    tags = {
+      project     = var.project_name
+      environment = var.environment
+      managed_by  = "terraform"
+    }
+  }
 }
 
 data "aws_caller_identity" "current" {}
