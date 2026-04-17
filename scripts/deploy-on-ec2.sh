@@ -32,9 +32,9 @@ run "aws s3 sync s3://$ARTIFACTS_BUCKET/prod/ $APP_DIR/ --delete --region $AWS_R
 
 # 2. Parameter Store → .env 생성
 ENV_FILE="$APP_DIR/.env"
-run "aws ssm get-parameters-by-path --path /${PROJECT_NAME}/ --with-decryption --recursive --region $AWS_REGION \
+run "aws ssm get-parameters-by-path --path /${PROJECT_NAME}/ --with-decryption --region $AWS_REGION \
   --query 'Parameters[].[Name,Value]' --output text \
-  | awk -F'\\t' '{ n=\$1; sub(\"^/${PROJECT_NAME}/\",\"\",n); printf \"%s=%s\\n\", toupper(n), \$2 }' > $ENV_FILE"
+  | awk -F'\\t' '{ n=\$1; sub(\"^/${PROJECT_NAME}/\",\"\",n); if (n !~ /[/.-]/) printf \"%s=%s\\n\", toupper(n), \$2 }' > $ENV_FILE"
 run "chmod 600 $ENV_FILE && chown ubuntu:ubuntu $ENV_FILE"
 
 # 3. nginx conf envsubst → /etc/nginx/conf.d
