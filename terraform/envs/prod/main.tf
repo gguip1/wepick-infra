@@ -8,16 +8,49 @@ terraform {
     }
   }
 
-  # 추후 S3 backend 전환 권장
-  # backend "s3" {
-  #   bucket = "wepick-tfstate"
-  #   key    = "envs/prod/terraform.tfstate"
-  #   region = "ap-northeast-2"
-  # }
+  # envs/backend/ apply 후 아래 주석 해제 → terraform init -migrate-state
+  backend "s3" {
+    bucket       = "wepick-tfstate-149465616382"
+    key          = "envs/prod/terraform.tfstate"
+    region       = "ap-northeast-2"
+    encrypt      = true
+    use_lockfile = true
+  }
 }
 
 provider "aws" {
   region = var.aws_region
+}
+
+data "aws_caller_identity" "current" {}
+
+# 배포 파일 저장용 S3 버킷 (docker-compose, nginx config)
+resource "aws_s3_bucket" "artifacts" {
+  bucket = "${var.project_name}-artifacts-${data.aws_caller_identity.current.account_id}"
+
+  tags = {
+    Name        = "${var.project_name}-artifacts"
+    Environment = var.environment
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
 }
 
 module "vpc" {
@@ -41,9 +74,10 @@ module "security_group" {
 module "iam" {
   source = "../../modules/iam"
 
-  project_name = var.project_name
-  environment  = var.environment
-  aws_region   = var.aws_region
+  project_name          = var.project_name
+  environment           = var.environment
+  aws_region            = var.aws_region
+  artifacts_bucket_name = aws_s3_bucket.artifacts.bucket
 }
 
 module "ec2" {

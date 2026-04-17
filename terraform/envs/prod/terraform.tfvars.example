@@ -1,7 +1,0 @@
-aws_region         = "ap-northeast-2"
-project_name       = "wepick"
-environment        = "prod"
-instance_type      = "t4g.small"
-ami_id             = ""  # 비워두면 SSM에서 최신 AL2023 ARM64 자동 참조
-vpc_cidr           = "10.0.0.0/16"
-public_subnet_cidr = "10.0.1.0/24"

@@ -48,7 +48,7 @@ resource "aws_iam_role_policy_attachment" "parameter_store_read" {
   policy_arn = aws_iam_policy.parameter_store_read.arn
 }
 
-# S3 읽기 (.env 배포 및 인증서 복원 경유용)
+# S3 읽기 (artifacts 버킷: docker-compose, nginx config)
 data "aws_iam_policy_document" "s3_read" {
   statement {
     actions = [
@@ -56,8 +56,8 @@ data "aws_iam_policy_document" "s3_read" {
       "s3:ListBucket",
     ]
     resources = [
-      "arn:aws:s3:::${var.project_name}-deploy",
-      "arn:aws:s3:::${var.project_name}-deploy/*",
+      "arn:aws:s3:::${var.artifacts_bucket_name}",
+      "arn:aws:s3:::${var.artifacts_bucket_name}/*",
     ]
   }
 }
