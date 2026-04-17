@@ -31,7 +31,6 @@ resource "aws_instance" "this" {
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-app"
-    Environment = var.environment
   }
 
   lifecycle {
@@ -45,6 +44,5 @@ resource "aws_eip" "this" {
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-eip"
-    Environment = var.environment
   }
 }

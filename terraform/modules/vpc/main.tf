@@ -5,7 +5,6 @@ resource "aws_vpc" "this" {
 
   tags = {
     Name        = "${var.project_name}-vpc"
-    Environment = var.environment
   }
 }
 
@@ -17,7 +16,6 @@ resource "aws_subnet" "public" {
 
   tags = {
     Name        = "${var.project_name}-public-subnet"
-    Environment = var.environment
   }
 }
 
@@ -26,7 +24,6 @@ resource "aws_internet_gateway" "this" {
 
   tags = {
     Name        = "${var.project_name}-igw"
-    Environment = var.environment
   }
 }
 
@@ -40,7 +37,6 @@ resource "aws_route_table" "public" {
 
   tags = {
     Name        = "${var.project_name}-public-rt"
-    Environment = var.environment
   }
 }
 
@@ -58,6 +54,5 @@ resource "aws_vpc_endpoint" "s3" {
 
   tags = {
     Name        = "${var.project_name}-s3-endpoint"
-    Environment = var.environment
   }
 }

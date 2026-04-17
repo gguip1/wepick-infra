@@ -37,7 +37,6 @@ resource "aws_s3_bucket" "artifacts" {
 
   tags = {
     Name        = "${var.project_name}-artifacts"
-    Environment = var.environment
   }
 }
 

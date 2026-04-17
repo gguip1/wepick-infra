@@ -14,7 +14,6 @@ resource "aws_iam_role" "this" {
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-ec2-role"
-    Environment = var.environment
   }
 }
 

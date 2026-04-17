@@ -34,6 +34,5 @@ resource "aws_security_group" "this" {
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-sg"
-    Environment = var.environment
   }
 }
