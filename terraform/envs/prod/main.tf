@@ -99,3 +99,9 @@ module "ec2" {
   sg_id                 = module.security_group.sg_id
   instance_profile_name = module.iam.instance_profile_name
 }
+
+module "ecr" {
+  source = "../../modules/ecr"
+
+  repository_names = ["${var.project_name}-be", "${var.project_name}-fe"]
+}
