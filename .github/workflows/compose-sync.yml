@@ -1,10 +1,12 @@
-name: Sync docker-compose to S3
+name: Sync prod artifacts to S3
 
 on:
   push:
     branches: [main]
     paths:
-      - 'docker/prod/docker-compose.yml'
+      - 'docker/prod/**'
+      - 'nginx/prod/**'
+      - 'scripts/**'
 
 permissions:
   id-token: write
@@ -12,7 +14,7 @@ permissions:
 
 jobs:
   sync:
-    name: Upload docker-compose to S3
+    name: Upload prod artifacts to S3
     runs-on: ubuntu-latest
 
     steps:
@@ -24,7 +26,17 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
 
-      - name: Upload docker-compose to S3
+      - name: Sync docker/prod, nginx/prod, scripts to S3
         run: |
-          aws s3 cp docker/prod/docker-compose.yml \
-            s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/docker-compose.yml
+          aws s3 sync docker/prod/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/docker/prod/ --delete
+          aws s3 sync nginx/prod/  s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/nginx/prod/  --delete
+          aws s3 sync scripts/     s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/scripts/     --delete --exclude '*.local.*'
+
+      - name: Trigger deploy-all
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api repos/${{ github.repository }}/dispatches \
+            -f event_type='deploy-all' \
+            -f client_payload[reason]='compose-sync auto trigger'
