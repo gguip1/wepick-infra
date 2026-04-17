@@ -6,49 +6,45 @@ AWS_REGION="${aws_region}"
 
 echo "=== [userdata-app-server] wepick app server bootstrap start ==="
 
-# 패키지 업데이트 및 Docker 설치
-dnf update -y
-dnf install -y docker
+# 패키지 업데이트
+apt-get update -y
+apt-get upgrade -y
+
+# Docker 공식 레포 추가 및 설치
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+  "deb [arch=arm64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+apt-get update -y
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
 systemctl enable docker
 systemctl start docker
-usermod -aG docker ec2-user
+usermod -aG docker ubuntu
 
-# docker compose v2 플러그인 설치 (ARM64)
-mkdir -p /usr/local/lib/docker/cli-plugins
-curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" \
-  -o /usr/local/lib/docker/cli-plugins/docker-compose
-chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# SSM Agent 설치 (Ubuntu는 기본 내장 아님)
+snap install amazon-ssm-agent --classic
+systemctl enable snap.amazon-ssm-agent.amazon-ssm-agent
+systemctl start snap.amazon-ssm-agent.amazon-ssm-agent
 
-# SSM Agent 확인 (Amazon Linux 2023 기본 내장)
-systemctl enable amazon-ssm-agent
-systemctl start amazon-ssm-agent
+# AWS CLI 설치 (ARM64)
+apt-get install -y unzip
+curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install
+rm -rf /tmp/awscliv2.zip /tmp/aws
 
 # certbot 설치 (Let's Encrypt)
-dnf install -y python3-pip augeas-libs
-pip3 install certbot certbot-nginx
+apt-get install -y certbot python3-certbot-nginx
 
 # 앱 디렉토리 생성
 mkdir -p /srv/wepick
-chown ec2-user:ec2-user /srv/wepick
-
-# ghcr.io 로그인 (Parameter Store에서 토큰 취득)
-GHCR_TOKEN=$(aws ssm get-parameter \
-  --name "/$PROJECT_NAME/ghcr_token" \
-  --with-decryption \
-  --query "Parameter.Value" \
-  --output text \
-  --region "$AWS_REGION" 2>/dev/null || echo "")
-
-if [ -n "$GHCR_TOKEN" ]; then
-  GHCR_USER=$(aws ssm get-parameter \
-    --name "/$PROJECT_NAME/ghcr_user" \
-    --query "Parameter.Value" \
-    --output text \
-    --region "$AWS_REGION")
-  echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-  echo "ghcr.io login succeeded"
-else
-  echo "WARNING: ghcr.io token not found in Parameter Store — skipping login"
-fi
+chown ubuntu:ubuntu /srv/wepick
 
 echo "=== [userdata-app-server] bootstrap complete ==="

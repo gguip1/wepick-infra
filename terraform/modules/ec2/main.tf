@@ -1,9 +1,9 @@
-data "aws_ssm_parameter" "al2023_arm64_ami" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
+data "aws_ssm_parameter" "ubuntu2404_arm64_ami" {
+  name = "/aws/service/canonical/ubuntu/server/24.04/stable/current/arm64/hvm/ebs-gp2/ami-id"
 }
 
 locals {
-  ami_id = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.al2023_arm64_ami.value
+  ami_id = var.ami_id != "" ? var.ami_id : data.aws_ssm_parameter.ubuntu2404_arm64_ami.value
 }
 
 resource "aws_instance" "this" {
@@ -25,7 +25,7 @@ resource "aws_instance" "this" {
 
   root_block_device {
     volume_type = "gp3"
-    volume_size = 20
+    volume_size = 30
     encrypted   = true
   }
 

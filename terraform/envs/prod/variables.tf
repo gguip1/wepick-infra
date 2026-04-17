@@ -19,7 +19,7 @@ variable "instance_type" {
 }
 
 variable "ami_id" {
-  description = "AMI ID. 비워두면 SSM에서 최신 AL2023 ARM64 자동 참조"
+  description = "AMI ID. 비워두면 SSM에서 최신 Ubuntu 24.04 ARM64 자동 참조"
   type        = string
   default     = ""
 }
