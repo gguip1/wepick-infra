@@ -40,8 +40,8 @@ unzip -q /tmp/awscliv2.zip -d /tmp
 /tmp/aws/install
 rm -rf /tmp/awscliv2.zip /tmp/aws
 
-# certbot
-apt-get install -y certbot python3-certbot-nginx
+# certbot (nginx 플러그인 미설치 — docker compose nginx와 80/443 포트 충돌 방지)
+apt-get install -y certbot
 
 # 앱 디렉토리
 mkdir -p /srv/wepick
