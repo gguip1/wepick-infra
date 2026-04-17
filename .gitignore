@@ -6,8 +6,6 @@
 **/crash.log
 **/override.tf
 **/override.tf.json
-**/*.tfvars
-!**/*.tfvars.example
 
 # 환경변수
 .env
