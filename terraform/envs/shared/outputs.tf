@@ -22,3 +22,8 @@ output "fe_deploy_role_arn" {
   description = "wepick-fe GitHub Actions가 assume할 role ARN — Secrets에 AWS_ROLE_ARN_DEPLOY로 등록"
   value       = aws_iam_role.fe_deploy.arn
 }
+
+output "infra_deploy_role_arn" {
+  description = "wepick-infra GitHub Actions(Sync, Deploy)가 assume할 role ARN — Secrets AWS_ROLE_ARN으로 등록"
+  value       = aws_iam_role.infra_deploy.arn
+}
