@@ -10,7 +10,7 @@ terraform {
 
   backend "s3" {
     bucket       = "wepick-tfstate-149465616382"
-    key          = "envs/global/terraform.tfstate"
+    key          = "envs/shared/terraform.tfstate"
     region       = "ap-northeast-2"
     encrypt      = true
     use_lockfile = true
