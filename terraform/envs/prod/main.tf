@@ -31,12 +31,22 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
+# shared state에서 IAM·ECR 등 계정 공유 자원 참조
+data "terraform_remote_state" "shared" {
+  backend = "s3"
+  config = {
+    bucket = "wepick-tfstate-149465616382"
+    key    = "envs/shared/terraform.tfstate"
+    region = "ap-northeast-2"
+  }
+}
+
 # 배포 파일 저장용 S3 버킷 (docker-compose, nginx config)
 resource "aws_s3_bucket" "artifacts" {
   bucket = "${var.project_name}-artifacts-${data.aws_caller_identity.current.account_id}"
 
   tags = {
-    Name        = "${var.project_name}-artifacts"
+    Name = "${var.project_name}-artifacts"
   }
 }
 
@@ -77,15 +87,6 @@ module "security_group" {
   vpc_id       = module.vpc.vpc_id
 }
 
-module "iam" {
-  source = "../../modules/iam"
-
-  project_name          = var.project_name
-  environment           = var.environment
-  aws_region            = var.aws_region
-  artifacts_bucket_name = aws_s3_bucket.artifacts.bucket
-}
-
 module "ec2" {
   source = "../../modules/ec2"
 
@@ -96,11 +97,5 @@ module "ec2" {
   ami_id                = var.ami_id
   subnet_id             = module.vpc.public_subnet_id
   sg_id                 = module.security_group.sg_id
-  instance_profile_name = module.iam.instance_profile_name
-}
-
-module "ecr" {
-  source = "../../modules/ecr"
-
-  repository_names = ["${var.project_name}-be", "${var.project_name}-fe"]
+  instance_profile_name = data.terraform_remote_state.shared.outputs.ec2_instance_profile_name
 }
