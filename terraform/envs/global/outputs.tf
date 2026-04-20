@@ -1,0 +1,24 @@
+output "ec2_instance_profile_name" {
+  description = "prod EC2 모듈에 전달할 instance profile 이름"
+  value       = module.iam.instance_profile_name
+}
+
+output "ecr_be_url" {
+  description = "Backend ECR repository URL"
+  value       = module.ecr.repository_urls["${var.project_name}-be"]
+}
+
+output "ecr_fe_url" {
+  description = "Frontend ECR repository URL"
+  value       = module.ecr.repository_urls["${var.project_name}-fe"]
+}
+
+output "be_deploy_role_arn" {
+  description = "wepick-be GitHub Actions가 assume할 role ARN — Secrets에 AWS_ROLE_ARN_DEPLOY로 등록"
+  value       = aws_iam_role.be_deploy.arn
+}
+
+output "fe_deploy_role_arn" {
+  description = "wepick-fe GitHub Actions가 assume할 role ARN — Secrets에 AWS_ROLE_ARN_DEPLOY로 등록"
+  value       = aws_iam_role.fe_deploy.arn
+}
