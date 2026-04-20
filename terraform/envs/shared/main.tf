@@ -164,3 +164,87 @@ resource "aws_iam_role_policy" "fe_ecr_push" {
   role   = aws_iam_role.fe_deploy.id
   policy = data.aws_iam_policy_document.fe_ecr_push.json
 }
+
+# ─────────────────────────────────────────────
+# wepick-infra Deploy OIDC Role (Sync + Deploy 워크플로용)
+# ─────────────────────────────────────────────
+resource "aws_iam_role" "infra_deploy" {
+  name = "${var.project_name}-infra-deploy"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Federated = local.oidc_provider_arn }
+      Action    = "sts:AssumeRoleWithWebIdentity"
+      Condition = {
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:${var.github_owner}/${var.project_name}-infra:ref:refs/heads/main"
+        }
+      }
+    }]
+  })
+}
+
+data "aws_iam_policy_document" "infra_deploy" {
+  # S3 artifacts (compose-sync용)
+  statement {
+    sid = "S3ArtifactsRW"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      "arn:aws:s3:::${local.artifacts_bucket}",
+      "arn:aws:s3:::${local.artifacts_bucket}/*",
+    ]
+  }
+
+  # SSM Parameter Store (deploy.yml이 image_tag 업데이트, instance_id 조회)
+  statement {
+    sid = "SsmParameter"
+    actions = [
+      "ssm:GetParameter",
+      "ssm:GetParameters",
+      "ssm:PutParameter",
+    ]
+    resources = ["arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/*"]
+  }
+
+  # SSM SendCommand (deploy.yml이 EC2에 명령 실행)
+  statement {
+    sid     = "SsmSendCommandDocument"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
+    ]
+  }
+
+  statement {
+    sid     = "SsmSendCommandInstance"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:*:instance/*",
+    ]
+  }
+
+  statement {
+    sid = "SsmCommandResult"
+    actions = [
+      "ssm:GetCommandInvocation",
+      "ssm:DescribeInstanceInformation",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "infra_deploy" {
+  name   = "${var.project_name}-infra-deploy"
+  role   = aws_iam_role.infra_deploy.id
+  policy = data.aws_iam_policy_document.infra_deploy.json
+}
