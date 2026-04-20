@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # SSM SendCommand가 EC2에서 실행하는 배포 스크립트.
 # 사용법: deploy-on-ec2.sh <service>
 #   service: backend | frontend | nginx | mysql | all
 # 환경변수:
 #   DRY_RUN=1 — 실제 명령은 실행하지 않고 출력만
-set -euo pipefail
+set -eu
+set -o pipefail 2>/dev/null || true   # dash에서 무시
 
 SERVICE="${1:-all}"
 AWS_REGION="ap-northeast-2"
