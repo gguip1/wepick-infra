@@ -59,16 +59,40 @@ fi
 # 6. 이미지 정리
 run "docker image prune -f"
 
-# 7. health check (nginx 가용성)
-echo "=== [deploy-on-ec2] health check ==="
-for i in $(seq 1 10); do
-  if curl -fsS -o /dev/null http://localhost/; then
-    echo "health check OK (attempt $i)"
-    exit 0
+# 7. health check — service에 맞춰 컨테이너 status 확인
+if [[ "$SERVICE" == "all" ]]; then
+  CONTAINERS="wepick_mysql wepick_backend wepick_frontend wepick_nginx"
+else
+  CONTAINERS="wepick_$SERVICE"
+fi
+
+echo "=== [deploy-on-ec2] health check (containers: $CONTAINERS) ==="
+for C in $CONTAINERS; do
+  STATUS=missing
+  for i in $(seq 1 30); do
+    STATUS=$(docker inspect --format '{{.State.Status}}' "$C" 2>/dev/null || echo missing)
+    if [[ "$STATUS" == "running" ]]; then
+      echo "$C: running (attempt $i)"
+      break
+    fi
+    sleep 2
+  done
+  if [[ "$STATUS" != "running" ]]; then
+    echo "ERROR: $C not running (status=$STATUS)" >&2
+    exit 1
   fi
-  echo "health check pending (attempt $i)..."
-  sleep 3
 done
 
-echo "ERROR: health check failed after 10 attempts" >&2
-exit 1
+# service=all 일 때만 nginx 외부 접근 검증
+if [[ "$SERVICE" == "all" ]]; then
+  for i in $(seq 1 10); do
+    if curl -fsS -o /dev/null http://localhost/; then
+      echo "external http://localhost OK (attempt $i)"
+      exit 0
+    fi
+    echo "external check pending (attempt $i)..."
+    sleep 3
+  done
+  echo "ERROR: external health check failed after 10 attempts" >&2
+  exit 1
+fi
