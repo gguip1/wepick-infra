@@ -31,10 +31,12 @@ services:
     expose:
       - "8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      CLOUD_AWS_S3_DOMAIN: ${CLOUD_AWS_S3_DOMAIN}
     depends_on:
       mysql:
         condition: service_healthy
