@@ -3,6 +3,11 @@ output "ec2_instance_profile_name" {
   value       = module.iam.instance_profile_name
 }
 
+output "ec2_role_name" {
+  description = "prod env에서 추가 inline policy를 붙일 EC2 role 이름"
+  value       = module.iam.role_name
+}
+
 output "ecr_be_url" {
   description = "Backend ECR repository URL"
   value       = module.ecr.repository_urls["${var.project_name}-be"]

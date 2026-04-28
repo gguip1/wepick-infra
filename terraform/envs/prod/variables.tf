@@ -59,3 +59,39 @@ variable "domain_name" {
   description = "Public domain name served by nginx (e.g., wepick.example.com)"
   type        = string
 }
+
+variable "mysql_host" {
+  description = "Database host used by the backend container"
+  type        = string
+  default     = "mysql"
+}
+
+variable "mysql_port" {
+  description = "Database port used by the backend container"
+  type        = string
+  default     = "3306"
+}
+
+variable "mysql_database" {
+  description = "Application database name"
+  type        = string
+  default     = "wepick"
+}
+
+variable "mysql_user" {
+  description = "Application database user"
+  type        = string
+  default     = "wepick"
+}
+
+variable "initial_image_tag" {
+  description = "Initial image tag stored in SSM before app CI/CD overwrites it"
+  type        = string
+  default     = "latest"
+}
+
+variable "image_cors_allowed_origins" {
+  description = "Origins allowed to upload directly to the images S3 bucket with presigned URLs"
+  type        = list(string)
+  default     = ["https://wepick.cloud"]
+}

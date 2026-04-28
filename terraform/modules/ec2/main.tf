@@ -18,6 +18,12 @@ resource "aws_instance" "this" {
   # key_name 생략 — SSH 대신 SSM Session Manager 사용
   key_name = var.key_name != "" ? var.key_name : null
 
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
   user_data = templatefile("${path.module}/scripts/userdata-app-server.sh", {
     project_name = var.project_name
     aws_region   = var.aws_region
@@ -30,7 +36,7 @@ resource "aws_instance" "this" {
   }
 
   tags = {
-    Name        = "${var.project_name}-${var.environment}-app"
+    Name = "${var.project_name}-${var.environment}-app"
   }
 
   lifecycle {
@@ -43,6 +49,6 @@ resource "aws_eip" "this" {
   instance = aws_instance.this.id
 
   tags = {
-    Name        = "${var.project_name}-${var.environment}-eip"
+    Name = "${var.project_name}-${var.environment}-eip"
   }
 }
