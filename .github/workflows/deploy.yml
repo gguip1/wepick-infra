@@ -1,8 +1,19 @@
-name: Deploy to prod EC2
+name: Deploy runtime bundle to prod EC2
 
 on:
-  repository_dispatch:
-    types: [deploy-be, deploy-fe, deploy-all]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Compose service to restart'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - backend
+          - frontend
+          - nginx
+          - mysql
 
 permissions:
   id-token: write
@@ -14,7 +25,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy ${{ github.event.action }}
+    name: Deploy ${{ inputs.service }}
     runs-on: ubuntu-latest
 
     steps:
@@ -24,75 +35,35 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ap-northeast-2
 
-      - name: Resolve target service
-        id: target
-        run: |
-          case "${{ github.event.action }}" in
-            deploy-be)  echo "service=backend"  >> $GITHUB_OUTPUT ;;
-            deploy-fe)  echo "service=frontend" >> $GITHUB_OUTPUT ;;
-            deploy-all) echo "service=all"      >> $GITHUB_OUTPUT ;;
-            *) echo "unknown action: ${{ github.event.action }}" >&2; exit 1 ;;
-          esac
-
-      - name: Update SSM image tag (BE/FE only)
-        if: github.event.action != 'deploy-all'
-        env:
-          IMAGE_TAG: ${{ github.event.client_payload.image_tag }}
-        run: |
-          if [[ -z "$IMAGE_TAG" ]]; then
-            echo "client_payload.image_tag is required" >&2
-            exit 1
-          fi
-          PARAM_NAME="/wepick/$( [[ '${{ github.event.action }}' == 'deploy-be' ]] && echo be_image_tag || echo fe_image_tag )"
-          aws ssm put-parameter --name "$PARAM_NAME" --value "$IMAGE_TAG" --type String --overwrite
-
       - name: Get instance ID
         id: instance
         run: |
           IID=$(aws ssm get-parameter --name /wepick/instance_id --query "Parameter.Value" --output text)
-          echo "id=$IID" >> $GITHUB_OUTPUT
+          echo "id=$IID" >> "$GITHUB_OUTPUT"
 
-      - name: SSM SendCommand → deploy-on-ec2.sh
+      - name: SSM SendCommand deploy-on-ec2.sh
         id: ssm
         run: |
           CMD_ID=$(aws ssm send-command \
-            --instance-ids ${{ steps.instance.outputs.id }} \
+            --instance-ids "${{ steps.instance.outputs.id }}" \
             --document-name "AWS-RunShellScript" \
-            --comment "Deploy ${{ steps.target.outputs.service }} via GitHub Actions" \
-            --parameters commands='["BUCKET=$(aws ssm get-parameter --name /wepick/artifacts_bucket --query Parameter.Value --output text --region ap-northeast-2)","aws s3 cp s3://$BUCKET/prod/scripts/deploy-on-ec2.sh /tmp/deploy-on-ec2.sh --region ap-northeast-2","chmod +x /tmp/deploy-on-ec2.sh","bash /tmp/deploy-on-ec2.sh ${{ steps.target.outputs.service }}"]' \
-            --query "Command.CommandId" --output text)
-          echo "command_id=$CMD_ID" >> $GITHUB_OUTPUT
+            --comment "Deploy ${{ inputs.service }} runtime via GitHub Actions" \
+            --parameters commands='["BUCKET=$(aws ssm get-parameter --name /wepick/artifacts_bucket --query Parameter.Value --output text --region ap-northeast-2)","aws s3 cp s3://$BUCKET/prod/scripts/deploy-on-ec2.sh /tmp/deploy-on-ec2.sh --region ap-northeast-2","chmod +x /tmp/deploy-on-ec2.sh","bash /tmp/deploy-on-ec2.sh ${{ inputs.service }}"]' \
+            --query "Command.CommandId" \
+            --output text)
+          echo "command_id=$CMD_ID" >> "$GITHUB_OUTPUT"
 
       - name: Wait for SSM command
         run: |
           aws ssm wait command-executed \
-            --command-id ${{ steps.ssm.outputs.command_id }} \
-            --instance-id ${{ steps.instance.outputs.id }}
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "${{ steps.instance.outputs.id }}"
 
       - name: Show SSM output
         if: always()
         run: |
           aws ssm get-command-invocation \
-            --command-id ${{ steps.ssm.outputs.command_id }} \
-            --instance-id ${{ steps.instance.outputs.id }} \
+            --command-id "${{ steps.ssm.outputs.command_id }}" \
+            --instance-id "${{ steps.instance.outputs.id }}" \
             --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
             --output json
-
-      - name: Update commit status on source repo
-        if: github.event.action != 'deploy-all' && github.event.client_payload.source_repo && github.event.client_payload.source_sha
-        env:
-          STATUS_TOKEN: ${{ github.event.action == 'deploy-be' && secrets.BE_REPO_STATUS_TOKEN || secrets.FE_REPO_STATUS_TOKEN }}
-          SOURCE_REPO: ${{ github.event.client_payload.source_repo }}
-          SOURCE_SHA:  ${{ github.event.client_payload.source_sha }}
-          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
-        run: |
-          curl -fsS -X POST \
-            -H "Authorization: Bearer $STATUS_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$SOURCE_REPO/statuses/$SOURCE_SHA" \
-            -d "{
-              \"state\": \"$STATE\",
-              \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
-              \"context\": \"deploy/prod\",
-              \"description\": \"deploy ${{ steps.target.outputs.service }} ${{ job.status }}\"
-            }"

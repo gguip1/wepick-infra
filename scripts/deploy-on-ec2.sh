@@ -33,10 +33,55 @@ run "aws s3 sync s3://$ARTIFACTS_BUCKET/prod/ $APP_DIR/ --delete --region $AWS_R
 
 # 2. Parameter Store → .env 생성
 ENV_FILE="$APP_DIR/.env"
-run "aws ssm get-parameters-by-path --path /${PROJECT_NAME}/ --with-decryption --region $AWS_REGION \
-  --query 'Parameters[].[Name,Value]' --output text \
-  | awk -F'\\t' '{ n=\$1; sub(\"^/${PROJECT_NAME}/\",\"\",n); if (n !~ /[/.-]/) printf \"%s=%s\\n\", toupper(n), \$2 }' > $ENV_FILE"
-run "chmod 600 $ENV_FILE && chown ubuntu:ubuntu $ENV_FILE"
+get_param() {
+  aws ssm get-parameter \
+    --name "/${PROJECT_NAME}/$1" \
+    --with-decryption \
+    --query "Parameter.Value" \
+    --output text \
+    --region "$AWS_REGION"
+}
+
+write_required_env() {
+  key="$1"
+  param="$2"
+  value=$(get_param "$param")
+  printf "%s=%s\n" "$key" "$value" >> "$ENV_FILE"
+}
+
+write_optional_env() {
+  key="$1"
+  param="$2"
+  default="$3"
+  if value=$(get_param "$param" 2>/dev/null); then
+    printf "%s=%s\n" "$key" "$value" >> "$ENV_FILE"
+  else
+    printf "%s=%s\n" "$key" "$default" >> "$ENV_FILE"
+  fi
+}
+
+if [[ "${DRY_RUN:-0}" == "1" ]]; then
+  echo "DRY_RUN: create $ENV_FILE from explicit SSM parameter mapping"
+else
+  : > "$ENV_FILE"
+  write_optional_env "AWS_REGION" "aws_region" "$AWS_REGION"
+  write_required_env "MYSQL_ROOT_PASSWORD" "mysql_root_password"
+  write_required_env "MYSQL_PASSWORD" "mysql_password"
+  write_required_env "MYSQL_USER" "mysql_user"
+  write_required_env "MYSQL_HOST" "mysql_host"
+  write_required_env "MYSQL_PORT" "mysql_port"
+  write_required_env "MYSQL_DATABASE" "mysql_database"
+  write_required_env "BE_IMAGE" "be_image"
+  write_required_env "BE_IMAGE_TAG" "be_image_tag"
+  write_required_env "FE_IMAGE" "fe_image"
+  write_required_env "FE_IMAGE_TAG" "fe_image_tag"
+  write_required_env "DOMAIN_NAME" "domain_name"
+  write_required_env "CORS_ALLOWED_ORIGINS" "cors_allowed_origins"
+  write_required_env "CLOUD_AWS_S3_DOMAIN" "cloud_aws_s3_domain"
+  write_required_env "S3_BUCKET_NAME" "s3_bucket_name"
+  chmod 600 "$ENV_FILE"
+  chown ubuntu:ubuntu "$ENV_FILE"
+fi
 
 # 3. nginx conf envsubst → /etc/nginx/conf.d
 run "mkdir -p /etc/nginx/conf.d"

@@ -114,6 +114,60 @@ resource "aws_iam_role_policy" "be_ecr_push" {
   policy = data.aws_iam_policy_document.be_ecr_push.json
 }
 
+data "aws_iam_policy_document" "be_prod_deploy" {
+  statement {
+    sid = "SsmParameterRead"
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/instance_id",
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/artifacts_bucket",
+    ]
+  }
+
+  statement {
+    sid = "SsmImageTagWrite"
+    actions = [
+      "ssm:PutParameter",
+    ]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/be_image_tag",
+    ]
+  }
+
+  statement {
+    sid     = "SsmSendCommandDocument"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
+    ]
+  }
+
+  statement {
+    sid     = "SsmSendCommandInstance"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:*:instance/*",
+    ]
+  }
+
+  statement {
+    sid = "SsmCommandResult"
+    actions = [
+      "ssm:GetCommandInvocation",
+      "ssm:DescribeInstanceInformation",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "be_prod_deploy" {
+  name   = "${var.project_name}-be-prod-deploy"
+  role   = aws_iam_role.be_deploy.id
+  policy = data.aws_iam_policy_document.be_prod_deploy.json
+}
+
 # ─────────────────────────────────────────────
 # FE Deploy OIDC Role
 # ─────────────────────────────────────────────
@@ -163,6 +217,60 @@ resource "aws_iam_role_policy" "fe_ecr_push" {
   name   = "${var.project_name}-fe-ecr-push"
   role   = aws_iam_role.fe_deploy.id
   policy = data.aws_iam_policy_document.fe_ecr_push.json
+}
+
+data "aws_iam_policy_document" "fe_prod_deploy" {
+  statement {
+    sid = "SsmParameterRead"
+    actions = [
+      "ssm:GetParameter",
+    ]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/instance_id",
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/artifacts_bucket",
+    ]
+  }
+
+  statement {
+    sid = "SsmImageTagWrite"
+    actions = [
+      "ssm:PutParameter",
+    ]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/fe_image_tag",
+    ]
+  }
+
+  statement {
+    sid     = "SsmSendCommandDocument"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}::document/AWS-RunShellScript",
+    ]
+  }
+
+  statement {
+    sid     = "SsmSendCommandInstance"
+    actions = ["ssm:SendCommand"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:*:instance/*",
+    ]
+  }
+
+  statement {
+    sid = "SsmCommandResult"
+    actions = [
+      "ssm:GetCommandInvocation",
+      "ssm:DescribeInstanceInformation",
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "fe_prod_deploy" {
+  name   = "${var.project_name}-fe-prod-deploy"
+  role   = aws_iam_role.fe_deploy.id
+  policy = data.aws_iam_policy_document.fe_prod_deploy.json
 }
 
 # ─────────────────────────────────────────────
