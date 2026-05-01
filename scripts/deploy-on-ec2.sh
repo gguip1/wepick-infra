@@ -77,6 +77,7 @@ else
   write_required_env "FE_IMAGE_TAG" "fe_image_tag"
   write_required_env "DOMAIN_NAME" "domain_name"
   write_required_env "CORS_ALLOWED_ORIGINS" "cors_allowed_origins"
+  write_required_env "SESSION_COOKIE_SAME_SITE" "session_cookie_same_site"
   write_required_env "CLOUD_AWS_S3_DOMAIN" "cloud_aws_s3_domain"
   write_required_env "S3_BUCKET_NAME" "s3_bucket_name"
   chmod 600 "$ENV_FILE"
