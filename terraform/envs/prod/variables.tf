@@ -95,3 +95,14 @@ variable "image_cors_allowed_origins" {
   type        = list(string)
   default     = ["https://wepick.cloud"]
 }
+
+variable "session_cookie_same_site" {
+  description = "Session cookie SameSite attribute (lax | none | strict). Use 'none' when FE and BE are on different subdomains so cross-site POST requests can still carry the session cookie."
+  type        = string
+  default     = "lax"
+
+  validation {
+    condition     = contains(["lax", "none", "strict"], var.session_cookie_same_site)
+    error_message = "session_cookie_same_site must be one of: lax, none, strict."
+  }
+}

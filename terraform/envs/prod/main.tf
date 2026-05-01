@@ -51,11 +51,12 @@ locals {
     mysql_user          = var.mysql_user
     be_image            = data.terraform_remote_state.shared.outputs.ecr_be_url
     fe_image            = data.terraform_remote_state.shared.outputs.ecr_fe_url
-    domain_name         = var.domain_name
-    artifacts_bucket    = aws_s3_bucket.artifacts.bucket
-    instance_id         = module.ec2.instance_id
-    s3_bucket_name      = aws_s3_bucket.images.bucket
-    cloud_aws_s3_domain = "https://${aws_cloudfront_distribution.images.domain_name}/"
+    domain_name              = var.domain_name
+    artifacts_bucket         = aws_s3_bucket.artifacts.bucket
+    instance_id              = module.ec2.instance_id
+    s3_bucket_name           = aws_s3_bucket.images.bucket
+    cloud_aws_s3_domain      = "https://${aws_cloudfront_distribution.images.domain_name}/"
+    session_cookie_same_site = var.session_cookie_same_site
   }
 
   ssm_image_tag_parameters = {
