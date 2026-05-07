@@ -88,12 +88,25 @@ fi
 run "mkdir -p /etc/nginx/conf.d"
 run "set -a && source $ENV_FILE && set +a && envsubst '\${DOMAIN_NAME}' < $APP_DIR/nginx/prod/wepick.conf > /etc/nginx/conf.d/wepick.conf"
 
-# 4. ECR login
+# 4. TLS 인증서 발급 (최초 1회, nginx/all 서비스에 한함)
+if [[ "$SERVICE" == "nginx" || "$SERVICE" == "all" ]]; then
+  DOMAIN_NAME_VAL=$(get_param "domain_name")
+  if [[ ! -f "/etc/letsencrypt/live/${DOMAIN_NAME_VAL}/fullchain.pem" ]]; then
+    echo "=== [deploy-on-ec2] TLS 인증서 없음 — certbot standalone 발급 시작 ==="
+    docker compose --env-file "$ENV_FILE" stop nginx 2>/dev/null || true
+    run "certbot certonly --standalone \
+      -d \"${DOMAIN_NAME_VAL}\" -d \"api.${DOMAIN_NAME_VAL}\" \
+      --non-interactive --agree-tos \
+      -m \"admin@${DOMAIN_NAME_VAL}\""
+  fi
+fi
+
+# 5. ECR login
 ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 run "aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY"
 
-# 5. compose pull + up
+# 6. compose pull + up
 cd "$APP_DIR/docker/prod"
 if [[ "$SERVICE" == "all" ]]; then
   run "docker compose --env-file $ENV_FILE pull"
@@ -103,10 +116,10 @@ else
   run "docker compose --env-file $ENV_FILE up -d $SERVICE"
 fi
 
-# 6. 이미지 정리
+# 7. 이미지 정리
 run "docker image prune -f"
 
-# 7. health check — service에 맞춰 컨테이너 status 확인
+# 8. health check — service에 맞춰 컨테이너 status 확인
 if [[ "$SERVICE" == "all" ]]; then
   CONTAINERS="wepick_mysql wepick_backend wepick_frontend wepick_nginx"
 else
