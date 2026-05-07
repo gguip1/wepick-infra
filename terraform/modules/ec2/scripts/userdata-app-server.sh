@@ -47,17 +47,6 @@ apt-get install -y certbot
 mkdir -p /srv/wepick
 chown ubuntu:ubuntu /srv/wepick
 
-# 부팅 시 1회 배포 시도 (S3 sync + compose up). 첫 배포는 TLS 미발급 상태이므로 nginx가
-# 실패할 수 있음 — 그래도 frontend/backend/mysql은 기동되도록 best-effort.
-ARTIFACTS_BUCKET=$(aws ssm get-parameter --name "/$${PROJECT_NAME}/artifacts_bucket" --query "Parameter.Value" --output text --region "$AWS_REGION" 2>/dev/null || echo "")
-if [[ -n "$ARTIFACTS_BUCKET" ]]; then
-  aws s3 cp "s3://$ARTIFACTS_BUCKET/prod/scripts/deploy-on-ec2.sh" /usr/local/bin/deploy-on-ec2.sh --region "$AWS_REGION" || true
-  if [[ -f /usr/local/bin/deploy-on-ec2.sh ]]; then
-    chmod +x /usr/local/bin/deploy-on-ec2.sh
-    /usr/local/bin/deploy-on-ec2.sh all || echo "WARN: initial deploy failed, manual SSM run required"
-  fi
-fi
-
 # certbot renew systemd timer
 cat > /etc/systemd/system/certbot-renew.service <<'EOF'
 [Unit]
