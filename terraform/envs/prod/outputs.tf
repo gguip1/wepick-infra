@@ -4,11 +4,10 @@ output "elastic_ip" {
 }
 
 output "operator_managed_ssm_parameters" {
-  description = "Values that Terraform intentionally does not own. Set these manually or with a separate secret-management flow before app deploy."
+  description = "Terraform created these with placeholder values. Set actual values before app deploy."
   value = [
-    "/${var.project_name}/mysql_password",
-    "/${var.project_name}/mysql_root_password",
-    "/${var.project_name}/cors_allowed_origins",
+    "aws ssm put-parameter --name '/${var.project_name}/mysql_password' --value '<실제값>' --type SecureString --overwrite",
+    "aws ssm put-parameter --name '/${var.project_name}/mysql_root_password' --value '<실제값>' --type SecureString --overwrite",
   ]
 }
 

@@ -106,3 +106,9 @@ variable "session_cookie_same_site" {
     error_message = "session_cookie_same_site must be one of: lax, none, strict."
   }
 }
+
+variable "cors_allowed_origins" {
+  description = "Comma-separated list of allowed origins for CORS configuration (e.g., https://wepick.cloud,https://admin.wepick.cloud)"
+  type        = list(string)
+  default     = ["https://wepick.cloud"]
+}

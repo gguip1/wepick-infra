@@ -41,7 +41,6 @@ data "terraform_remote_state" "shared" {
   }
 }
 
-# 배포 파일 저장용 S3 버킷 (docker-compose, nginx config)
 locals {
   ssm_string_parameters = {
     aws_region          = var.aws_region
@@ -57,6 +56,12 @@ locals {
     s3_bucket_name           = aws_s3_bucket.images.bucket
     cloud_aws_s3_domain      = "https://${aws_cloudfront_distribution.images.domain_name}/"
     session_cookie_same_site = var.session_cookie_same_site
+    cors_allowed_origins      = join(",", var.image_cors_allowed_origins)
+  }
+
+  ssm_operator_managed_string_parameters = {
+    mysql_password       = "REPLACE_WITH_ACTUAL_VALUE"
+    mysql_root_password  = "REPLACE_WITH_ACTUAL_VALUE"
   }
 
   ssm_image_tag_parameters = {
@@ -297,6 +302,18 @@ resource "aws_ssm_parameter" "image_tag" {
   type      = "String"
   value     = each.value
   overwrite = true
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
+resource "aws_ssm_parameter" "operator_managed" {
+  for_each = local.ssm_operator_managed_string_parameters
+
+  name  = "/${var.project_name}/${each.key}"
+  type  = "SecureString"
+  value = each.value
 
   lifecycle {
     ignore_changes = [value]
