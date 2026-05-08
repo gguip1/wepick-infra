@@ -7,6 +7,23 @@
 - AWS CLI v2 설치 + 로컬 credential 설정 (`aws sts get-caller-identity` 확인)
 - Terraform >= 1.10.0
 
+### 필요 IAM 권한
+
+최소 권한으로 구성하려면 아래 서비스 권한을 레이어별로 부여한다.
+
+| 레이어 | 서비스 | 주요 액션 |
+|--------|--------|-----------|
+| Bootstrap | S3 | `CreateBucket`, `DeleteBucket`, `PutBucketVersioning`, `PutBucketEncryption`, `PutBucketPublicAccessBlock`, `PutBucketPolicy` |
+| Bootstrap | IAM | `CreateOpenIDConnectProvider`, `GetOpenIDConnectProvider`, `DeleteOpenIDConnectProvider` |
+| Shared | IAM | `CreateRole`, `DeleteRole`, `GetRole`, `PutRolePolicy`, `GetRolePolicy`, `DeleteRolePolicy`, `AttachRolePolicy`, `DetachRolePolicy`, `CreateInstanceProfile`, `DeleteInstanceProfile`, `AddRoleToInstanceProfile`, `RemoveRoleFromInstanceProfile`, `PassRole` |
+| Shared | ECR | `CreateRepository`, `DeleteRepository`, `DescribeRepositories`, `SetRepositoryPolicy`, `GetRepositoryPolicy`, `PutLifecyclePolicy` |
+| Prod | EC2 | `RunInstances`, `TerminateInstances`, `DescribeInstances`, `CreateVpc`, `DeleteVpc`, `CreateSubnet`, `DeleteSubnet`, `CreateInternetGateway`, `AttachInternetGateway`, `CreateRouteTable`, `CreateSecurityGroup`, `AllocateAddress`, `AssociateAddress`, `ReleaseAddress` |
+| Prod | S3 | Bootstrap과 동일 |
+| Prod | CloudFront | `CreateDistribution`, `UpdateDistribution`, `DeleteDistribution`, `CreateCloudFrontOriginAccessControl`, `GetCloudFrontOriginAccessControl` |
+| Prod | SSM | `PutParameter`, `GetParameter`, `GetParameters`, `DeleteParameter`, `DescribeParameters` |
+| Prod | IAM | `PutRolePolicy` (EC2 role에 inline policy 추가) |
+| 공통 | STS | `GetCallerIdentity` |
+
 ---
 
 ## 1. Bootstrap
