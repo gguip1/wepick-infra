@@ -67,3 +67,23 @@ jobs:
             --instance-id "${{ steps.instance.outputs.id }}" \
             --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
             --output json
+
+      - name: Notify Discord (deploy)
+        if: success()
+        continue-on-error: true
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -H "Content-Type: application/json" -X POST \
+            -d "{\"embeds\":[{\"title\":\"✅ [INFRA Deploy: ${{ inputs.service }}] ${{ github.ref_name }} @ ${SHORT_SHA} (${{ github.actor }})\",\"description\":\"[👉 GitHub에서 바로 확인하기](${RUN_URL})\",\"color\":3911260}]}" \
+            "${{ secrets.DISCORD_DEPLOY_WEBHOOK_URL }}"
+
+      - name: Notify Discord (alerts)
+        if: failure()
+        continue-on-error: true
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -H "Content-Type: application/json" -X POST \
+            -d "{\"embeds\":[{\"title\":\"🚨 [INFRA Deploy: ${{ inputs.service }} ❌] ${{ github.ref_name }} @ ${SHORT_SHA} (${{ github.actor }})\",\"description\":\"[👉 GitHub에서 바로 확인하기](${RUN_URL})\",\"color\":15548997}]}" \
+            "${{ secrets.DISCORD_ALERTS_WEBHOOK_URL }}"

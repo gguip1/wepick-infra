@@ -31,3 +31,13 @@ jobs:
           aws s3 sync docker/prod/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/docker/prod/ --delete
           aws s3 sync nginx/prod/  s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/nginx/prod/  --delete
           aws s3 sync scripts/     s3://${{ secrets.AWS_S3_BUCKET_NAME }}/prod/scripts/     --delete --exclude '*.local.*'
+
+      - name: Notify Discord (alerts)
+        if: failure()
+        continue-on-error: true
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -H "Content-Type: application/json" -X POST \
+            -d "{\"embeds\":[{\"title\":\"🚨 [INFRA Sync ❌] ${{ github.ref_name }} @ ${SHORT_SHA} (${{ github.actor }})\",\"description\":\"[👉 GitHub에서 바로 확인하기](${RUN_URL})\",\"color\":15548997}]}" \
+            "${{ secrets.DISCORD_ALERTS_WEBHOOK_URL }}"
