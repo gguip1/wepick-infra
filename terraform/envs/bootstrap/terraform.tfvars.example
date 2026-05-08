@@ -1,0 +1,4 @@
+aws_region     = "ap-northeast-2"
+project_name   = "wepick"
+aws_account_id = "YOUR_ACCOUNT_ID"       # aws sts get-caller-identity --query Account --output text
+github_repo    = "YOUR_ORG/wepick-infra" # GitHub Actions OIDC 인증 범위
